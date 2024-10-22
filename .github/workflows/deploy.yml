@@ -31,48 +31,5 @@ jobs:
         chmod 600 ~/.ssh/private_key
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Install Dependencies and Deploy to EC2
-      env:
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-        EC2_USERNAME: ubuntu
-        AWS_REGION: ${{ secrets.AWS_REGION }}
-        ECR_REGISTRY: 841162707028.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-      run: |
-        ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'ENDSSH'
-          # Install AWS CLI v2 if not present
-          if ! command -v aws &> /dev/null; then
-            cd /tmp
-            sudo apt-get update
-            sudo apt-get install -y unzip curl
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip -q awscliv2.zip
-            sudo ./aws/install
-            rm awscliv2.zip
-            rm -rf aws
-          fi
-
-          # Get the Docker login command and execute it directly (avoiding the TTY issue)
-          DOCKER_LOGIN_CMD=$(aws ecr get-login-password --region ${AWS_REGION})
-          echo "${DOCKER_LOGIN_CMD}" | sudo docker login --username AWS --password-stdin "${ECR_REGISTRY}"
-
-          # Set the full image name
-          IMAGE_NAME="${ECR_REGISTRY}/mnist/gradio-app:latest"
-
-          # Pull new image
-          sudo docker pull "${IMAGE_NAME}"
-
-          # Stop and remove existing container (if exists)
-          if sudo docker ps -a --format '{{.Names}}' | grep -q "^gradio-app$"; then
-            sudo docker stop gradio-app
-            sudo docker rm gradio-app
-          fi
-
-          # Run new container
-          sudo docker run -d \
-            --name gradio-app \
-            -p 7860:7860 \
-            "${IMAGE_NAME}"
-
-          # Verify the container is running
-          sudo docker ps | grep gradio-app
-        ENDSSH
+    - name: pull docker image from ECR
+      run: docker pull 841162707028.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/mnist/gradio-app:latest
