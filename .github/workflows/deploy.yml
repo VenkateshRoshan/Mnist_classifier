@@ -31,6 +31,11 @@ jobs:
         chmod 600 ~/.ssh/private_key
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
+    # check via ssh if the key is working
+    - name: Check SSH Connection
+      run: |
+        ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "echo 'SSH Connection Established'"
+
     - name: Pull Docker image from ECR on EC2 instance
       run: |
         ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/mnist/gradio-app:latest"
