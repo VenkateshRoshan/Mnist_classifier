@@ -42,6 +42,7 @@ jobs:
       run: |
         ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "echo 'SSH Connection Established'"
     
+    # login to ECR on EC2 instance
     - name:
       run: |
         ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 841162707028.dkr.ecr.us-east-1.amazonaws.com"
