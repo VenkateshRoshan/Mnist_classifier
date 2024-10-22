@@ -39,28 +39,40 @@ jobs:
         ECR_REGISTRY: 841162707028.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
       run: |
         ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << 'ENDSSH'
-          # Install AWS CLI if not present
+          # Install AWS CLI v2 if not present
           if ! command -v aws &> /dev/null; then
+            cd /tmp
             sudo apt-get update
-            sudo apt-get install -y awscli
+            sudo apt-get install -y unzip curl
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip -q awscliv2.zip
+            sudo ./aws/install
+            rm awscliv2.zip
+            rm -rf aws
           fi
 
-          # Set AWS region
-          aws configure set region ${AWS_REGION}
+          # Get the Docker login command and execute it directly (avoiding the TTY issue)
+          DOCKER_LOGIN_CMD=$(aws ecr get-login-password --region ${AWS_REGION})
+          echo "${DOCKER_LOGIN_CMD}" | sudo docker login --username AWS --password-stdin "${ECR_REGISTRY}"
 
-          # Get ECR login token and login to Docker
-          aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REGISTRY}
+          # Set the full image name
+          IMAGE_NAME="${ECR_REGISTRY}/mnist/gradio-app:latest"
 
           # Pull new image
-          sudo docker pull ${ECR_REGISTRY}/mnist/gradio-app:latest
+          sudo docker pull "${IMAGE_NAME}"
 
           # Stop and remove existing container (if exists)
-          sudo docker ps -q --filter "name=gradio-app" | grep -q . && sudo docker stop gradio-app
-          sudo docker ps -aq --filter "name=gradio-app" | grep -q . && sudo docker rm gradio-app
+          if sudo docker ps -a --format '{{.Names}}' | grep -q "^gradio-app$"; then
+            sudo docker stop gradio-app
+            sudo docker rm gradio-app
+          fi
 
           # Run new container
           sudo docker run -d \
             --name gradio-app \
             -p 7860:7860 \
-            ${ECR_REGISTRY}/mnist/gradio-app:latest
+            "${IMAGE_NAME}"
+
+          # Verify the container is running
+          sudo docker ps | grep gradio-app
         ENDSSH
