@@ -24,6 +24,12 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
+    # - name: Build, tag, and push Docker image
+    #   run: |
+    #     docker build -t mnist/gradio-app .
+    #     docker tag mnist/gradio-app:latest 841162707028.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/mnist/gradio-app:latest
+    #     docker push 841162707028.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/mnist/gradio-app:latest
+
     - name: Setup SSH Key
       run: |
         mkdir -p ~/.ssh
